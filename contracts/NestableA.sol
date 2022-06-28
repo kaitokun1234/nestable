@@ -1,0 +1,145 @@
+// SPDX-License-Identifier: Unlisensed
+
+pragma solidity 0.8.15;
+
+contract ERC721Interface {
+  function tokenURI(uint256 tokenId) external view returns (string memory) {}
+  function ownerOf(uint256 tokenId) external view returns(address) {}
+}
+
+contract NestableA {
+
+    struct Parent {
+        address contractAddr;
+        uint tokenId;
+        Child[] children;
+    }
+
+    struct Child {
+        uint tokenId;
+        address owner;
+        bool nesting;
+        uint parentId;
+    }
+
+    mapping(uint => Child) children;
+    mapping(uint => Parent) parents;
+    mapping(address => uint) balances;
+    mapping(uint256 => address) private _tokenApprovals;
+    mapping(address => mapping(address => bool)) private _operatorApprovals;
+
+    uint childrenCount;
+    uint parentsCount = 1;
+
+    string  private _name;
+    string private _symbol;
+
+    function parentRawTokenURI(address _contractAddr, uint _tokenId) public view returns(string memory) {
+      ERC721Interface erc721contract = ERC721Interface(_contractAddr);
+      return erc721contract.tokenURI(_tokenId);
+    }
+
+    function parentRawOwnerOf(address _contractAddr, uint _tokenId) public view returns(address) {
+      ERC721Interface erc721contract = ERC721Interface(_contractAddr);
+      return erc721contract.ownerOf(_tokenId);
+    }
+
+    function makeParent(address _contractAddr, uint _tokenId) public {
+      Child[] memory initChildren;
+      Parent memory newParent = Parent(_contractAddr, _tokenId, initChildren);
+      parents[parentsCount] = newParent;
+      parentsCount ++;
+    }
+
+    function mint() public {
+      Child memory newChild = Child(childrenCount, msg.sender, false, 0);
+      children[childrenCount] = newChild;
+      balances[msg.sender] ++;
+      childrenCount ++;
+    }
+
+
+    function transferFrom(address _from, address _to, uint _childId) public {
+      Child memory _child = children[_childId];
+      require(msg.sender == _from, "your address is not from address");
+      require(msg.sender == _child.owner, "you are not owner");
+      require(!_child.nesting, "this element is nesting");
+      children[_childId].owner = _to;
+      balances[_to]++;
+      balances[_from]--;
+    }
+
+    function balanceOf(address _owner) external view returns(uint) {
+      return balances[_owner];
+    }
+
+    function ownerOf(uint _childId) public view returns(address) {
+      Child memory _child = children[_childId];
+      if(_child.nesting){
+        Parent memory _parent = parents[_child.parentId];
+        return parentRawOwnerOf(_parent.contractAddr, _parent.tokenId);
+      }else{
+        return _child.owner;
+      }
+    }
+
+    function nest(uint _childId, uint _parentId) public{
+      require(parentRawOwnerOf(parents[_parentId].contractAddr, parents[_parentId].tokenId) == msg.sender, "you are not parent owner");
+      require(ownerOf(_childId) == msg.sender, "you are not owner");
+      require(!children[_childId].nesting, "this is nesting");
+      require(children[_childId].parentId == 0, "this is nesting");
+      children[_childId].parentId = _parentId;
+      children[_childId].nesting = true;
+    }
+
+    function unnest(uint _childId) public{
+      require(children[_childId].nesting, "this is nesting");
+      require(ownerOf(_childId) == msg.sender, "you are not owner");
+      children[_childId].parentId = 0;
+      children[_childId].nesting = false;
+      children[_childId].owner == msg.sender;
+    }
+
+    function isNesting(uint _childId) public view returns(bool) {
+      return children[_childId].nesting;
+    }
+
+    function name() external view returns(string memory) {
+      return _name;
+    }
+
+    function symbol() external view returns(string memory) {
+      return _symbol;
+    }
+
+    function approve(address to, uint256 tokenId) public virtual override {
+        address owner = ownerOf(tokenId);
+        require(to != owner, "approval to current owner");
+
+        require(
+            _msgSender() == owner || isApprovedForAll(owner, _msgSender()),
+            "approve caller is not owner nor approved for all"
+        );
+
+        _approve(to, tokenId);
+    }
+
+    function isApprovedForAll(address owner, address operator) public view virtual override returns (bool) {
+        return _operatorApprovals[owner][operator];
+    }
+
+    function _approve(address to, uint256 tokenId) internal virtual {
+      _tokenApprovals[tokenId] = to;
+      emit Approval(ERC721.ownerOf(tokenId), to, tokenId);
+    }
+
+    function getApproved(uint256 tokenId) public view virtual override returns (address) {
+        require(_exists(tokenId), "ERC721: approved query for nonexistent token");
+
+        return _tokenApprovals[tokenId];
+    }
+
+    function _exists(uint256 tokenId) internal view virtual returns (bool) {
+      return _owners[tokenId] != address(0);
+    }
+}
