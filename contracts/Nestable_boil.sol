@@ -19,7 +19,7 @@ contract Nestable_boil is ERC721Enumerable, Ownable {
     struct Parent {
         address contractAddr;
         uint tokenId;
-        Child[] children;
+        uint[] children;
     }
 
     struct Child {
@@ -49,7 +49,7 @@ contract Nestable_boil is ERC721Enumerable, Ownable {
         string memory _name,
         string memory _symbol
     ) ERC721(_name, _symbol) {}
-
+/*
     function _transfer(
         address from,
         address to,
@@ -71,7 +71,7 @@ contract Nestable_boil is ERC721Enumerable, Ownable {
         return super.ownerOf(tokenId);
       }
     }
-
+*/
     function parentRawTokenURI(address _contractAddr, uint _tokenId) public view returns(string memory) {
       ERC721Interface erc721contract = ERC721Interface(_contractAddr);
       return erc721contract.tokenURI(_tokenId);

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Unlisensed
-
-pragma solidity 0.8.15;
+/*
+pragma solidity 0.8.9;
 
 contract ERC721Interface {
   function tokenURI(uint256 tokenId) external view returns (string memory) {}
@@ -111,7 +111,7 @@ contract NestableA {
     function symbol() external view returns(string memory) {
       return _symbol;
     }
-
+/*
     function approve(address to, uint256 tokenId) public virtual override {
         address owner = ownerOf(tokenId);
         require(to != owner, "approval to current owner");
@@ -142,4 +142,5 @@ contract NestableA {
     function _exists(uint256 tokenId) internal view virtual returns (bool) {
       return _owners[tokenId] != address(0);
     }
+    
 }
